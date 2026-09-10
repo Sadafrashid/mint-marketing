@@ -1,0 +1,8 @@
+---
+// Card-swap interaction for the Instagram reels stack.
+// PERFORMANCE FIX: the original markup loaded two byte-identical script
+// tags here (both declaring the same swapCards() function, the second
+// silently overwriting the first) — an extra HTTP request and a duplicate
+// parse/execute for zero behavioral difference. Consolidated to one file.
+---
+<script src="/scripts/instagram.js" is:inline></script>

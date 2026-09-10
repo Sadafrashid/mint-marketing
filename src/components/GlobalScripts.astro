@@ -1,0 +1,23 @@
+---
+// Site-wide scripts that used to sit at the bottom of the original file:
+// mobile nav/hamburger + scroll-spy + contact form handling, animated
+// stat counters, the testimonials carousel (+ footer year + privacy
+// modal), scroll-reveal animations, and cursor-parallax leaves. Loaded
+// last, in the same relative order as the original markup, so every
+// element they query already exists in the DOM above them.
+//
+// PERFORMANCE FIX: this used to also load the full AOS library from
+// unpkg (unminified aos.js) and call AOS.init(). AOS's own stylesheet
+// (aos.css) was never included anywhere in the project, so the classes
+// AOS toggles on scroll had no CSS to act on — the 8 elements marked
+// data-aos were receiving zero visible animation, while the page still
+// paid for fetching/parsing the library and for AOS's scroll/resize/
+// mutation observers running continuously. Removing it is a pure
+// no-visual-change cleanup: those elements looked exactly the same
+// before and after, since AOS was never actually animating them.
+---
+<script src="/scripts/aos-nav-contact.js" is:inline></script>
+<script src="/scripts/counters.js" is:inline></script>
+<script src="/scripts/carousel-footer-privacy.js" is:inline></script>
+<script src="/scripts/reveal.js" is:inline></script>
+<script src="/scripts/parallax.js" is:inline></script>

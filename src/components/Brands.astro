@@ -1,0 +1,27 @@
+---
+// Infinite marquee of client logos — the same 5 logos repeated 3x in the
+// original markup for a seamless CSS-driven scroll loop. Each logo now
+// serves a WebP first (roughly 80-90% smaller) with the original PNG as
+// fallback for browsers that don't support WebP.
+const logos = [
+  { file: 'brand1', alt: 'Aqsa' },
+  { file: 'brand2', alt: 'Pro Ultimate Gyms' },
+  { file: 'brand3', alt: 'ttabib' },
+  { file: 'brand4', alt: 'Sattva' },
+  { file: 'brand5', alt: 'PUG' },
+];
+const track = [...logos, ...logos, ...logos];
+---
+<section id="brands" class="brands-section">
+    <h2 class="section-title" data-aos="fade-up">Brands we are minting</h2>
+    <div class="brands-slider">
+        <div class="brands-track">
+            {track.map((logo) => (
+                <picture>
+                    <source srcset={`/${logo.file}.webp`} type="image/webp">
+                    <img loading="lazy" decoding="async" src={`/${logo.file}.PNG`} alt={logo.alt}>
+                </picture>
+            ))}
+        </div>
+    </div>
+</section>

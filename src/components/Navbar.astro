@@ -1,0 +1,23 @@
+---
+// Site navigation, originally rendered inside #intro-hero so it sits on
+// top of the 3D model from first paint. Markup/behavior unchanged; the
+// logo now serves WebP first with the original PNG as a fallback.
+---
+<nav>
+    <picture>
+        <source srcset="/IMG_6733.webp" type="image/webp">
+        <img src="/IMG_6733.PNG" alt="Mint Marketing" width="46" height="46">
+    </picture>
+
+    <div class="hamburger" id="hamburger" role="button" tabindex="0" aria-label="Toggle menu" aria-expanded="false" aria-controls="nav-links">
+        <span></span>
+        <span></span>
+        <span></span>
+    </div>
+
+    <ul class="nav-links" id="nav-links">
+        <li><a href="#testimonials">Testimonials</a></li>
+        <li><a href="#services">Services</a></li>
+        <li><a href="#contact">Contact</a></li>
+    </ul>
+</nav>

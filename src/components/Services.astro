@@ -1,0 +1,55 @@
+---
+// Content migrated verbatim from the original monolithic index.html.
+---
+<section id="services" class="expertise-section">
+    <!-- PREMIUM ENHANCEMENT: leaf watermark, back to left. -->
+    <div class="leaf-watermark" data-depth="0.7" style="bottom:-8%; left:-8%;" aria-hidden="true">
+        <picture><source srcset="/leaf.webp" type="image/webp"><img src="/leaf.png" alt="" loading="lazy"></picture>
+    </div>
+
+    <div class="expertise-head" data-reveal="soft-rise">
+        <span class="expertise-tag">WHAT WE DO BEST</span>
+        <h2 class="expertise-title">Our Expertise</h2>
+        <p class="expertise-sub">End-to-end digital solutions that drive growth, build brands and create impact.</p>
+    </div>
+
+    <!-- FLOATING 3D PORTFOLIO GALLERY — each service artwork sits on its own
+         card in real 3D space (perspective + rotateY + translateZ). The
+         center card faces the viewer; its neighbours curve away on either
+         side like covers fanned in a collector's case. Drag/swipe pans the
+         arrangement, the mouse adds a gentle parallax tilt on desktop, and
+         a soft mirrored reflection + spotlight glow keep it feeling like a
+         gallery plinth rather than a UI carousel. -->
+    <div class="gallery-wrap" id="servicesSlider" data-reveal="card-rise">
+
+        <div class="gallery-glow" aria-hidden="true"></div>
+
+        <div class="gallery-stage">
+            <div class="gallery-tilt" id="galleryTilt">
+                <div class="gallery-track" id="galleryTrack">
+                    <!-- .gallery-card elements are rendered by the script below,
+                         one per entry in the SERVICES array. -->
+                </div>
+            </div>
+
+            <button class="gallery-arrow gallery-prev" id="galleryPrev" aria-label="Previous service">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <button class="gallery-arrow gallery-next" id="galleryNext" aria-label="Next service">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+        </div>
+
+        <div class="gallery-copy">
+            <div class="gallery-copy-inner" id="galleryCopy">
+                <span class="gallery-index" id="galleryIndexLabel">01 / 07</span>
+                <h3 class="gallery-name" id="galleryName">Social Media Management</h3>
+                <p class="gallery-desc" id="galleryDesc">Strategy-led content calendars and community growth across every platform that matters.</p>
+            </div>
+        </div>
+
+        <div class="gallery-nav" id="galleryNav"></div>
+
+    </div>
+</section>
+

@@ -1,0 +1,56 @@
+---
+import Navbar from './Navbar.astro';
+---
+<div id="intro-hero">
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="loader-logo">MINT</div>
+  <div class="loader-bar-wrap"><div class="loader-bar" id="loader-bar"></div></div>
+  <div class="loader-num" id="loader-num">0%</div>
+</div>
+
+<!-- NAV — part of the intro hero, so it's visible right alongside the 3D model -->
+<Navbar />
+
+<!-- STATUS BAR -->
+<div class="status-bar">
+  <div class="status-dot"></div>
+  <div class="status-text">MINT MARKETING</div>
+  <div class="status-dot" style="animation-delay:0.8s"></div>
+</div>
+
+<!-- PARTICLE CANVAS -->
+<canvas id="particles"></canvas>
+
+<!-- 3D CANVAS -->
+<canvas id="three-canvas"></canvas>
+
+<!-- OVERLAYS -->
+<div class="vignette"></div>
+<div class="noise"></div>
+<div class="scanlines"></div>
+
+<!-- CONTENT -->
+<div id="content">
+
+  <h1 class="headline">
+    <span class="headline-line">MINT</span>
+    <span class="headline-line">MARKETING</span>
+  </h1>
+  <div class="divider"></div>
+  <p class="subtext">MINT hai to<br>HIT hai</p>
+
+  <!-- CTA -->
+  <div class="cta-wrap">
+    <a href="#contact" class="cta-btn">Get in Touch</a>
+    <div class="scroll-hint">
+      <span>Tap to begin</span>
+      <div class="tap-arrow">&#8593;</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /#intro-hero -->
+
+<div id="transition-veil"></div>

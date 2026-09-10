@@ -1,0 +1,81 @@
+---
+// Site-wide layout: <head> (SEO/meta/fonts), the two style blocks that were
+// originally inline in <head>, and the page shell. Visual output is
+// unchanged from the original static index.html — only the delivery
+// mechanism (Astro components instead of one 5,700-line file) is different.
+import '../styles/global.css';
+
+export interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = 'MINT Marketing — Digital Marketing, Branding & Content Studio',
+  description = 'MINT Marketing is a digital marketing, branding, photography and content studio helping brands grow with strategy that actually moves people. Mint hai to hit hai.',
+} = Astro.props;
+
+const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+// EDIT ME: swap in a real social preview image once one is available.
+const ogImage = new URL('/hero.jpg', Astro.site);
+---
+<!DOCTYPE html>
+<html lang="en" class="is-loading">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Force light rendering regardless of the visitor's OS/browser theme —
+     without this, some mobile browsers (Android Chrome's "Auto Dark
+     Theme" in particular) will auto-invert/darken pages that don't
+     declare a color-scheme, since the site never got a chance to opt out. -->
+<meta name="color-scheme" content="light only">
+
+<title>{title}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonicalURL} />
+
+<!-- Open Graph -->
+<meta property="og:type" content="website" />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonicalURL} />
+<meta property="og:image" content={ogImage} />
+<meta property="og:site_name" content="MINT Marketing" />
+
+<!-- Twitter / X -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={ogImage} />
+
+<!-- Favicon (EDIT ME: replace placeholder with a real favicon set) -->
+<link rel="icon" type="image/png" href="/IMG_6733.PNG" />
+<link rel="apple-touch-icon" href="/IMG_6733.PNG" />
+
+<!-- Structured data: basic Organization -->
+<script type="application/ld+json" set:html={JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "MINT Marketing",
+  "url": canonicalURL.toString(),
+  "logo": ogImage.toString(),
+  "sameAs": ["https://instagram.com/mintmarketingindia"]
+})} />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+
+<!-- Preload the hero background model + first paint critical image -->
+<link rel="preload" as="fetch" href="/your-file.glb" crossorigin />
+</head>
+<body>
+
+<!-- CUSTOM CURSOR — site-wide, not just the intro screen -->
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+
+<slot />
+
+</body>
+</html>

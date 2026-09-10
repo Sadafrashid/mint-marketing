@@ -1,0 +1,16 @@
+---
+// All script tags here are `is:inline` so Astro leaves them exactly as
+// written (no bundling/transform) and preserves the original loading
+// order: Lenis smooth-scroll first, then the Three.js + GLTFLoader CDN
+// builds, then the cursor/particles/3D-scene/loader script that depends
+// on them. The JS itself is byte-identical to the original file — only
+// moved out of an inline <script> block into /public/scripts/*.js so it
+// can be cached and isn't duplicated into every page's HTML.
+---
+<script src="https://unpkg.com/lenis@1.1.18/dist/lenis.min.js" is:inline></script>
+<script src="/scripts/lenis-init.js" is:inline></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" defer is:inline></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js" defer is:inline></script>
+
+<script src="/scripts/intro-scene.js" is:inline></script>
