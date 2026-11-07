@@ -19,7 +19,11 @@
         <div class="contact-form-wrapper" data-reveal="soft-rise" style="--reveal-delay:150ms;">
             <form id="mintContactForm">
                 <input type="text" id="userName" name="name" placeholder="What should we call you?" required>
-                <input type="email" id="userEmail" name="email" placeholder="Your best email" required>
+                <div style="position:relative;">
+                    <input type="email" id="userEmail" name="email" placeholder="Your best email" required autocomplete="email" aria-describedby="email-hint" style="padding-right:56px;">
+                    <span id="email-status-icon" aria-hidden="true" style="display:none; position:absolute; right:20px; top:30px; transform:translateY(-50%); align-items:center; pointer-events:none;"></span>
+                    <p id="email-hint" role="status" style="display:none; margin:-12px 0 16px 6px; color:#b3261e; font-size:0.85rem; text-align:left;"></p>
+                </div>
                 
                 <select id="userService" name="service" required>
                     <option value="" disabled selected>Which service are you looking for?</option>
@@ -46,4 +50,3 @@
         </div>
     </div>
 </section>
-
