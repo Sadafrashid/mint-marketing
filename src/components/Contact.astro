@@ -18,23 +18,25 @@
 
         <div class="contact-form-wrapper" data-reveal="soft-rise" style="--reveal-delay:150ms;">
             <form id="mintContactForm">
-                <input type="text" id="userName" placeholder="What should we call you?" required>
-                <input type="email" id="userEmail" placeholder="Your best email" required>
+                <input type="text" id="userName" name="name" placeholder="What should we call you?" required>
+                <input type="email" id="userEmail" name="email" placeholder="Your best email" required>
                 
-                <select id="userService" required>
+                <select id="userService" name="service" required>
                     <option value="" disabled selected>Which service are you looking for?</option>
                     <option value="Social Media">Social Media Management</option>
                     <option value="Photography">Photography</option>
                     <option value="Branding & Design">Branding & Identity</option>
-                    <option value="Influencer Markting">Influencer Marketing</option>
+                    <option value="Influencer Marketing">Influencer Marketing</option>
                     <option value="Content Creation">Content Creation</option>
                     <option value="Web Development">Web Development</option>
                     <option value="Digital Marketing">Digital Marketing</option>
                 </select>
                 
-                <textarea id="userVision" placeholder="Tell us about your brand vision..." rows="4"></textarea>
+                <textarea id="userVision" name="message" placeholder="Tell us about your brand vision..." rows="4"></textarea>
                 
+                <input type="text" name="_honey" tabindex="-1" autocomplete="off" aria-hidden="true" style="display:none;">
                 <button type="submit" class="submit-btn">SEND INQUIRY</button>
+                <p id="contact-error" role="alert" style="display:none; margin-top:14px; color:#b3261e; font-size:0.95rem; text-align:center;"></p>
             </form>
 
             <div id="success-message" style="display: none; text-align: center;">

@@ -53,22 +53,88 @@
     }
 
     // Close menu when a link is clicked (useful for one-page sites)
-    document.getElementById('mintContactForm').addEventListener('submit', function(e) {
-    e.preventDefault(); 
-    
-    const name = this.querySelector('input[type="text"]').value;
-    const email = this.querySelector('input[type="email"]').value;
-    const service = this.querySelector('select').value;
-    const message = this.querySelector('textarea').value;
+    // Contact form: delivers enquiries by email through FormSubmit (AJAX endpoint),
+    // so visitors never leave the site or open an email app.
+    (function () {
+        var form = document.getElementById('mintContactForm');
+        if (!form) return;
 
-    if(name && email && service) {
-        // Open the user's email client manually
-        const mailtoLink = `mailto:workwithmintmarketing@gmail.com?subject=Inquiry from ${name}&body=Service: ${service}%0D%0AEmail: ${email}%0D%0A%0D%0A${message}`;
-        window.location.href = mailtoLink;
+        var FORMSUBMIT_URL = 'https://formsubmit.co/ajax/workwithmintmarketing@gmail.com';
+        var submitBtn = form.querySelector('.submit-btn');
+        var errorBox = document.getElementById('contact-error');
+        var idleLabel = submitBtn.textContent;
+        var isSending = false;
 
-        // Show the success UI
-        this.style.display = 'none';
-        document.getElementById('success-message').style.display = 'block';
-    }
-});
+        function setSending(on) {
+            isSending = on;
+            submitBtn.disabled = on;
+            submitBtn.textContent = on ? 'SENDING...' : idleLabel;
+            submitBtn.style.opacity = on ? '0.7' : '';
+            submitBtn.style.cursor = on ? 'not-allowed' : '';
+            submitBtn.setAttribute('aria-busy', on ? 'true' : 'false');
+        }
 
+        function showError(msg) {
+            errorBox.textContent = msg;
+            errorBox.style.display = 'block';
+        }
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (isSending) return; // block duplicate submissions
+
+            errorBox.style.display = 'none';
+
+            // Spam trap: real visitors never see or fill this field.
+            if (form.elements['_honey'] && form.elements['_honey'].value) return;
+
+            var name = form.elements['name'].value.trim();
+            var email = form.elements['email'].value.trim();
+            var service = form.elements['service'].value;
+            var message = form.elements['message'].value.trim();
+            if (!name || !email || !service) return;
+
+            setSending(true);
+
+            var controller = new AbortController();
+            var timer = setTimeout(function () { controller.abort(); }, 20000);
+
+            fetch(FORMSUBMIT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({
+                    name: name,
+                    email: email,
+                    service: service,
+                    message: message || '(No message provided)',
+                    _subject: 'New website enquiry from ' + name + ' (' + service + ')',
+                    _replyto: email,
+                    _template: 'table',
+                    _captcha: 'false'
+                }),
+                signal: controller.signal
+            })
+            .then(function (res) {
+                return res.json().catch(function () { return {}; }).then(function (data) {
+                    return { ok: res.ok, data: data };
+                });
+            })
+            .then(function (result) {
+                clearTimeout(timer);
+                var success = result.ok && (result.data.success === true || result.data.success === 'true');
+                if (!success) {
+                    console.error('FormSubmit did not accept the enquiry:', result.data);
+                    throw new Error('send-failed');
+                }
+                // Only now do we show the success state.
+                form.style.display = 'none';
+                document.getElementById('success-message').style.display = 'block';
+            })
+            .catch(function (err) {
+                clearTimeout(timer);
+                if (err && err.message !== 'send-failed') console.error('Contact form error:', err);
+                setSending(false);
+                showError('Sorry, we couldn\u2019t send your enquiry just now. Please check your connection and try again, or email us at workwithmintmarketing@gmail.com.');
+            });
+        });
+    })();

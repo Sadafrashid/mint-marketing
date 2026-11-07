@@ -90,6 +90,44 @@
                     impact: 'Aqsa Beauty Collection didn\u2019t just gain followers &mdash; it gained visibility, recognition and trust within its local market, evolving from a basic product-posting page into a content-driven beauty brand with an identifiable online personality and a highly engaged audience. Most importantly, the growth stayed 100% organic: no paid ads, no artificial reach &mdash; just consistent strategy, relevant content, experimentation and execution. And the journey is still ongoing.'
                 }
             },
+            {
+                image: '/pro-ultimate-gomti-nagar.PNG',
+                tag: 'Case Study 03',
+                name: 'Pro Ultimate Gym, Gomti Nagar',
+                services: 'Social Media Marketing &middot; Content Creation &middot; Branding &middot; Video Production &middot; Meta Ads Management',
+                desc: 'Pro Ultimate Gym, Gomti Nagar was still under construction when we began. We built brand awareness and anticipation before launch, positioning it as Lucknow\u2019s Biggest and Most Luxurious Gym &mdash; and turned that excitement into 500+ pre-sales memberships before the gym officially opened.',
+                metrics: [
+                    { value: 500, suffix: '+', label: 'Pre-Sales Memberships' }
+                ],
+                full: {
+                    client: 'Pro Ultimate Gym, Gomti Nagar',
+                    industry: 'Fitness',
+                    services: 'Social Media Marketing &middot; Content Creation &middot; Branding &middot; Video Production &middot; Meta Ads Management',
+                    challengeIntro: 'Pro Ultimate Gym, Gomti Nagar, was under construction, and the primary challenge was to build brand awareness even before the gym officially opened. The audience had limited awareness about the upcoming gym, and we needed to establish it as Lucknow\u2019s Biggest and Most Luxurious Gym from day one. Our main objective was to create excitement around the upcoming launch, increase local audience reach, and generate pre-sales leads to secure memberships before the gym\u2019s opening.',
+                    results: [
+                        { icon: '\uD83D\uDCB3', text: '500+ Pre-Sales Memberships Before the Official Gym Opening.' },
+                        { icon: '\uD83D\uDCE2', text: 'Successfully Built Brand Awareness Before Launch.' },
+                        { icon: '\uD83C\uDFC6', text: 'Established Strong Positioning as Lucknow\u2019s Biggest and Most Luxurious Gym.' },
+                        { icon: '\uD83D\uDCE9', text: 'Generated Pre-Launch Leads Through Organic Content and Meta Ads.' },
+                        { icon: '\uD83E\uDD1D', text: 'Continued Marketing Partnership After the Gym\u2019s Official Opening.' }
+                    ],
+                    strategy: [
+                        { title: 'Pre-Launch Brand Positioning', desc: 'We positioned Pro Ultimate Gym as Lucknow\u2019s Biggest and Most Luxurious Gym, building the entire communication strategy around this identity to create a strong impression in the local fitness market.' },
+                        { title: 'Building Anticipation Through Content', desc: 'Since the gym was still under construction, we created content showcasing its development, upcoming facilities, and vision. This helped audiences understand what was coming and generated curiosity even before the opening.' },
+                        { title: 'Strategic Content Creation', desc: 'We developed a content strategy focused on construction and development updates, upcoming gym facilities and features, premium and luxurious gym positioning, informative and promotional videos, and engaging content designed to build excitement.' },
+                        { title: 'Organic Marketing &amp; Meta Ads', desc: 'We combined organic social media content with strategically managed Meta Ads to increase local visibility, reach potential members, and generate qualified pre-sales inquiries.' },
+                        { title: 'Pre-Sales Lead Generation', desc: 'Our primary focus was converting the excitement and awareness into actual memberships. Through consistent content, promotional campaigns, and paid advertising, we successfully generated 500+ pre-sales before the gym officially opened.' },
+                        { title: 'Post-Launch Marketing &amp; Growth', desc: 'Our association with Pro Ultimate Gym continues even after its opening. We currently manage its social media presence, create engaging content, run Meta Ads, and support ongoing lead generation and membership growth.' }
+                    ],
+                    takeaways: [
+                        'Built brand awareness and anticipation before the gym\u2019s official launch.',
+                        'Established a strong identity as Lucknow\u2019s Biggest and Most Luxurious Gym.',
+                        'Generated 500+ pre-sales before the gym even opened.',
+                        'Combined organic content marketing with paid advertising for lead generation.',
+                        'Continued marketing support focused on membership growth, brand visibility, and sales.'
+                    ]
+                }
+            },
             
             
             
