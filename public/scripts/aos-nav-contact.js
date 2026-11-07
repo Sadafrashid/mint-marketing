@@ -1,4 +1,4 @@
-    const hamburger = document.getElementById('hamburger');
+const hamburger = document.getElementById('hamburger');
     const navLinks = document.getElementById('nav-links');
 
     hamburger.addEventListener('click', () => {
@@ -54,17 +54,65 @@
 
     // Close menu when a link is clicked (useful for one-page sites)
     // Contact form: delivers enquiries by email through FormSubmit (AJAX endpoint),
-    // so visitors never leave the site or open an email app.
+    // so visitors never leave the site or open an email app. Also provides instant
+    // email FORMAT validation (red cross / green tick). The tick only means the
+    // text looks like an email address; it does not verify that a mailbox exists.
     (function () {
         var form = document.getElementById('mintContactForm');
         if (!form) return;
 
-        var FORMSUBMIT_URL = 'https://formsubmit.co/ajax/workwithmintmarketing@gmail.com';
+        // One place to change if the email service is ever swapped.
+        var ENDPOINT_URL = 'https://formsubmit.co/ajax/workwithmintmarketing@gmail.com';
+        var TIMEOUT_MS = 20000;
+
         var submitBtn = form.querySelector('.submit-btn');
         var errorBox = document.getElementById('contact-error');
+        var emailInput = form.elements['email'];
+        var emailIcon = document.getElementById('email-status-icon');
+        var emailHint = document.getElementById('email-hint');
         var idleLabel = submitBtn.textContent;
         var isSending = false;
 
+        // ---------- Email format validation ----------
+        var ICON_OK = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+        var ICON_BAD = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
+        var EMAIL_RE = /^[A-Za-z0-9.!#$%&'*+\/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/;
+
+        function isValidEmailFormat(value) {
+            if (!value || value.length > 254) return false;
+            if (!EMAIL_RE.test(value)) return false;
+            var local = value.split('@')[0];
+            if (local.length > 64 || local.charAt(0) === '.' || local.charAt(local.length - 1) === '.' || local.indexOf('..') !== -1) return false;
+            return /\.[A-Za-z]{2,}$/.test(value); // last part (e.g. .com) must be letters
+        }
+
+        function updateEmailStatus() {
+            var value = emailInput.value.trim();
+            if (!value) { // empty: show nothing
+                emailIcon.innerHTML = '';
+                emailIcon.style.display = 'none';
+                emailHint.style.display = 'none';
+                emailInput.removeAttribute('aria-invalid');
+                return false;
+            }
+            var ok = isValidEmailFormat(value);
+            emailIcon.innerHTML = ok ? ICON_OK : ICON_BAD;
+            emailIcon.style.color = ok ? '#1e5700' : '#b3261e';
+            emailIcon.style.display = 'flex';
+            emailInput.setAttribute('aria-invalid', ok ? 'false' : 'true');
+            if (ok) {
+                emailHint.style.display = 'none';
+            } else {
+                emailHint.textContent = 'Please enter a valid email, like name@example.com';
+                emailHint.style.display = 'block';
+            }
+            return ok;
+        }
+
+        emailInput.addEventListener('input', updateEmailStatus); // while typing / editing
+        emailInput.addEventListener('blur', updateEmailStatus);  // when leaving the field
+
+        // ---------- Submission ----------
         function setSending(on) {
             isSending = on;
             submitBtn.disabled = on;
@@ -89,50 +137,65 @@
             if (form.elements['_honey'] && form.elements['_honey'].value) return;
 
             var name = form.elements['name'].value.trim();
-            var email = form.elements['email'].value.trim();
+            var email = emailInput.value.trim();
             var service = form.elements['service'].value;
             var message = form.elements['message'].value.trim();
             if (!name || !email || !service) return;
 
+            if (!updateEmailStatus()) { // invalid format: do not send
+                emailInput.focus();
+                return;
+            }
+
             setSending(true);
 
-            var controller = new AbortController();
-            var timer = setTimeout(function () { controller.abort(); }, 20000);
+            // URL-encoded body + only CORS-safelisted headers => a "simple" request,
+            // so the browser sends no preflight (OPTIONS) request.
+            var params = new URLSearchParams();
+            params.append('name', name);
+            params.append('email', email);
+            params.append('service', service);
+            params.append('message', message || '(No message provided)');
+            params.append('_subject', 'New website enquiry from ' + name + ' (' + service + ')');
+            params.append('_replyto', email);
+            params.append('_template', 'table');
+            params.append('_captcha', 'false');
 
-            fetch(FORMSUBMIT_URL, {
+            var controller = new AbortController();
+            var timer = setTimeout(function () { controller.abort(); }, TIMEOUT_MS);
+
+            fetch(ENDPOINT_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                body: JSON.stringify({
-                    name: name,
-                    email: email,
-                    service: service,
-                    message: message || '(No message provided)',
-                    _subject: 'New website enquiry from ' + name + ' (' + service + ')',
-                    _replyto: email,
-                    _template: 'table',
-                    _captcha: 'false'
-                }),
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                    'Accept': 'application/json'
+                },
+                body: params.toString(),
                 signal: controller.signal
             })
             .then(function (res) {
                 return res.json().catch(function () { return {}; }).then(function (data) {
-                    return { ok: res.ok, data: data };
+                    return { ok: res.ok, status: res.status, data: data || {} };
                 });
             })
             .then(function (result) {
                 clearTimeout(timer);
-                var success = result.ok && (result.data.success === true || result.data.success === 'true');
-                if (!success) {
-                    console.error('FormSubmit did not accept the enquiry:', result.data);
+                var apiMsg = String(result.data.message || '');
+                var accepted = result.ok &&
+                    (result.data.success === true || result.data.success === 'true') &&
+                    !/activat/i.test(apiMsg);
+                if (!accepted) {
+                    // Log only the status and the service's own message (no customer data).
+                    console.error('Enquiry not accepted. HTTP ' + result.status + (apiMsg ? ': ' + apiMsg : ''));
                     throw new Error('send-failed');
                 }
-                // Only now do we show the success state.
+                // Only now, with explicit confirmation, show the success state.
                 form.style.display = 'none';
                 document.getElementById('success-message').style.display = 'block';
             })
             .catch(function (err) {
                 clearTimeout(timer);
-                if (err && err.message !== 'send-failed') console.error('Contact form error:', err);
+                if (err && err.message !== 'send-failed') console.error('Enquiry request failed:', err && err.name);
                 setSending(false);
                 showError('Sorry, we couldn\u2019t send your enquiry just now. Please check your connection and try again, or email us at workwithmintmarketing@gmail.com.');
             });
