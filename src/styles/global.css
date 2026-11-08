@@ -1627,21 +1627,6 @@ body::before {
     align-items: flex-start; 
 }
 
-.footer-logo {
-    /* Change width to a much larger, responsive size */
-    width: 100%;
-    max-width: 50px; /* Adjust this up or down until it looks perfectly balanced */
-    height: auto;
-    margin-bottom: 18px;
-    
-    /* Remove or comment out the filter so your true logo colors show */
-    /* filter: brightness(0) invert(1); */
-    
-    opacity: 0.95;
-    
-    
-   
-}
 
 .footer-brand p {
     font-size: 0.9rem;
