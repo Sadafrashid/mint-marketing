@@ -1639,9 +1639,7 @@ body::before {
     
     opacity: 0.95;
     
-    /* Optional: If your logo still has the cream square background, 
-       this blend mode can help it blend into the footer naturally */
-    mix-blend-mode: multiply; 
+   
 }
 
 .footer-brand p {
