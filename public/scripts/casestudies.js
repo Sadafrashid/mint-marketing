@@ -2,6 +2,8 @@
     (function () {
         var stage = document.getElementById('csStage');
         if (!stage) return;
+        if (stage.dataset.csInit) return; // never register the listeners twice
+        stage.dataset.csInit = '1';
 
         // ── YOUR PROJECTS ────────────────────────────────────────────
         // Slide 1 is real (carried over from the old book section).
@@ -137,6 +139,8 @@
         var current = 0;
         var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         var hasGSAP = typeof gsap !== 'undefined';
+        var finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+        var section = stage.closest('.cs-section');
 
         var prevBtn = document.getElementById('csPrev');
         var nextBtn = document.getElementById('csNext');
@@ -146,6 +150,13 @@
         var descEl = document.getElementById('csDesc');
         var metricsEl = document.getElementById('csMetrics');
         var ctaEl = document.getElementById('csCta');
+        var detailsEl = document.getElementById('csDetails');
+
+        // Shared runtime state
+        var centerSlot = null;       // slot currently in the centre (set by layout())
+        var sectionInView = false;   // driven by an IntersectionObserver, never by measuring
+        var stageInView = false;
+        var modalOpen = false;
 
         // Build one .cs-slot per project
         CASE_STUDIES.forEach(function (proj, i) {
@@ -186,6 +197,19 @@
         });
         var slots = Array.prototype.slice.call(stage.querySelectorAll('.cs-slot'));
 
+        var slots = Array.prototype.slice.call(stage.querySelectorAll('.cs-slot'));
+        // Cached once so interaction handlers never need to query the DOM.
+        var tiltEls = slots.map(function (slot) { return slot.querySelector('.cs-card-tilt'); });
+        var cardEls = slots.map(function (slot) { return slot.querySelector('.cs-card'); });
+        var imgEls  = slots.map(function (slot) { return slot.querySelector('img'); });
+
+        // Cached geometry for the tilt / magnetic effects. Re-measured only when
+        // something could actually have moved (navigation, scroll while hovering,
+        // resize) instead of on every mouse event.
+        var tiltRect = null, rectDirty = true, settleUntil = 0;
+        var ctaBase = null, ctaDirty = true;
+        function markGeometryDirty() { rectDirty = true; ctaDirty = true; }
+
         // ── Position every card relative to the active index (wraps both ways) ──
         function layout() {
             slots.forEach(function (slot, i) {
@@ -200,6 +224,8 @@
                 else if (abs === 2) { tx = 108 * offset;   tz = -320; ry = -22 * offset;   scale = 0.65; opacity = 0.32; blur = 3; z = 30; }
                 else                { tx = 140 * offset;   tz = -480; ry = -26 * offset;   scale = 0.5;  opacity = 0;    blur = 4; z = 10; }
 
+                if (abs === 0) centerSlot = slot;
+
                 slot.style.transform = 'translate3d(' + tx + '%, 0, ' + tz + 'px) rotateY(' + ry + 'deg) scale(' + scale + ')';
                 slot.style.opacity = opacity;
                 slot.style.filter = blur ? 'blur(' + blur + 'px)' : 'none';
@@ -210,121 +236,241 @@
             });
             progressFill.style.width = (100 / total) + '%';
             progressFill.style.transform = 'translateX(' + (current * 100) + '%)';
+            markGeometryDirty();
+        }
+
+        // ── Pause the always-running float animation when nobody can see it ──
+        // (section off-screen, or the full-screen blurred modal is covering it)
+        function syncAnimationState() {
+            var paused = !sectionInView || modalOpen;
+            for (var i = 0; i < cardEls.length; i++) cardEls[i].style.animationPlayState = paused ? 'paused' : '';
         }
 
         // ── Count-up metrics, replayed every time the centre card changes ──
-        function playMetrics(proj) {
+        // One rAF loop drives every counter, and starting a new one cancels the
+        // previous one, so rapid clicking can never stack animations.
+        var metricsRaf = 0;
+        var metricTargets = [];
+        function setMetricsFinal() {
+            metricTargets.forEach(function (t) { t.el.textContent = t.value + t.suffix; });
+        }
+        function stopMetrics(finish) {
+            if (metricsRaf) {
+                cancelAnimationFrame(metricsRaf);
+                metricsRaf = 0;
+                if (finish) setMetricsFinal();
+            }
+        }
+        function playMetrics(proj, animate) {
+            stopMetrics(false);
             metricsEl.innerHTML = '';
+            metricTargets = [];
+            var frag = document.createDocumentFragment();
             proj.metrics.forEach(function (m) {
                 var wrap = document.createElement('div');
                 wrap.className = 'cs-metric';
                 wrap.innerHTML = '<span class="cs-metric-num">0' + m.suffix + '</span><span class="cs-metric-label">' + m.label + '</span>';
-                metricsEl.appendChild(wrap);
-                var numEl = wrap.querySelector('.cs-metric-num');
-
-                if (reduceMotion) { numEl.textContent = m.value + m.suffix; return; }
-
-                var duration = 1400;
-                var start = performance.now();
-                function tick(now) {
-                    var p = Math.min((now - start) / duration, 1);
-                    var eased = 1 - Math.pow(1 - p, 3);
-                    numEl.textContent = Math.floor(eased * m.value) + m.suffix;
-                    if (p < 1) requestAnimationFrame(tick);
-                }
-                requestAnimationFrame(tick);
+                frag.appendChild(wrap);
+                metricTargets.push({ el: wrap.firstChild, value: m.value, suffix: m.suffix, last: -1 });
             });
+            metricsEl.appendChild(frag);
+
+            if (reduceMotion || !animate) { setMetricsFinal(); return; }
+
+            var duration = 1400;
+            var start = performance.now();
+            function tick(now) {
+                var p = Math.max(0, Math.min((now - start) / duration, 1));
+                var eased = 1 - Math.pow(1 - p, 3);
+                for (var i = 0; i < metricTargets.length; i++) {
+                    var t = metricTargets[i];
+                    var v = Math.floor(eased * t.value);
+                    if (v !== t.last) { t.last = v; t.el.textContent = v + t.suffix; } // only touch the DOM when the number changes
+                }
+                metricsRaf = p < 1 ? requestAnimationFrame(tick) : 0;
+            }
+            metricsRaf = requestAnimationFrame(tick);
         }
 
         // ── Swap the details panel to match the centre card ──
-        function updateDetails() {
+        // `animate` is false for the very first render at page load, which
+        // happens far off-screen where nobody could see the count-up or fade.
+        function updateDetails(animate) {
             var proj = CASE_STUDIES[current];
             eyebrowEl.innerHTML = proj.services;
             nameEl.textContent = proj.name;
             descEl.innerHTML = proj.desc;
-            playMetrics(proj);
+            playMetrics(proj, animate);
 
-            if (hasGSAP && !reduceMotion) {
-                gsap.fromTo('#csDetails', { opacity: 0.4, y: 8 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' });
+            if (animate && hasGSAP && !reduceMotion) {
+                gsap.fromTo(detailsEl, { opacity: 0.4, y: 8 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out', overwrite: 'auto' });
             }
         }
 
         function goTo(i) {
             current = ((i % total) + total) % total;
+            settleUntil = performance.now() + 900; // card is mid-transition; geometry is not final yet
             layout();
-            updateDetails();
+            updateDetails(true);
         }
 
         prevBtn.addEventListener('click', function () { goTo(current - 1); });
         nextBtn.addEventListener('click', function () { goTo(current + 1); });
 
+        // Keyboard: arrows only while the carousel is on screen (tracked by an
+        // observer, so no layout measurement on every key press).
         document.addEventListener('keydown', function (e) {
-            var rect = stage.getBoundingClientRect();
-            if (rect.top > window.innerHeight || rect.bottom < 0) return; // only when in view
+            if (e.key === 'Escape') {
+                if (csmModal.classList.contains('open')) closeCaseModal();
+                return;
+            }
+            if (!stageInView || modalOpen) return;
             if (e.key === 'ArrowLeft') goTo(current - 1);
             if (e.key === 'ArrowRight') goTo(current + 1);
         });
 
         // ── Drag / swipe, with a GSAP elastic snap-back on release ──
+        // Pointer Events only (they cover mouse, touch and pen), so a touch no
+        // longer fires both a pointer handler AND a touch handler. DOM writes are
+        // batched to one per animation frame and touch only the centre card.
         var dragging = false, dragStartX = 0, dragDX = 0;
-        function onDragStart(x) { dragging = true; dragStartX = x; dragDX = 0; stage.style.cursor = 'grabbing'; }
+        var dragRaf = 0, dragSlot = null, dragTransitionOff = false, suppressClick = false;
+
+        function applyDrag() {
+            dragRaf = 0;
+            if (!dragging || !dragSlot) return;
+            var pct = Math.max(-1, Math.min(1, dragDX / 220));
+            // Same transform the centre card has at rest, with only X shifted.
+            dragSlot.style.transform = 'translate3d(' + (pct * 14) + '%, 0, 0px) rotateY(0deg) scale(1.2)';
+        }
+        function onDragStart(x) {
+            dragging = true; dragStartX = x; dragDX = 0;
+            dragSlot = centerSlot;
+            dragTransitionOff = false;
+            stage.style.cursor = 'grabbing';
+        }
         function onDragMove(x) {
             if (!dragging) return;
             dragDX = x - dragStartX;
-            var pct = Math.max(-1, Math.min(1, dragDX / 220));
-            slots.forEach(function (slot) {
-                if (slot.classList.contains('is-center')) {
-                    slot.style.transition = 'none';
-                    slot.style.transform = slot.style.transform.replace(/translate3d\([^,]+,/, 'translate3d(' + (pct * 14) + '%,');
-                }
-            });
+            if (!dragTransitionOff && dragSlot) { dragSlot.style.transition = 'none'; dragTransitionOff = true; } // once per drag, not per event
+            if (!dragRaf) dragRaf = requestAnimationFrame(applyDrag);
         }
         function onDragEnd() {
             if (!dragging) return;
             dragging = false;
+            if (dragRaf) { cancelAnimationFrame(dragRaf); dragRaf = 0; }
             stage.style.cursor = '';
-            var threshold = 60;
-            var moved = Math.abs(dragDX) > threshold;
-            slots.forEach(function (slot) { slot.style.transition = ''; });
+            var moved = Math.abs(dragDX) > 60;
+            // A real drag must not also be treated as a click on the card underneath.
+            if (Math.abs(dragDX) > 5) {
+                suppressClick = true;
+                setTimeout(function () { suppressClick = false; }, 50);
+            }
+            if (dragSlot) dragSlot.style.transition = '';
             if (moved) goTo(current + (dragDX < 0 ? 1 : -1));
             else layout(); // snap back
             dragDX = 0;
+            dragSlot = null;
         }
-        stage.addEventListener('pointerdown', function (e) { onDragStart(e.clientX); });
-        window.addEventListener('pointermove', function (e) { onDragMove(e.clientX); });
-        window.addEventListener('pointerup', onDragEnd);
-        stage.addEventListener('touchstart', function (e) { onDragStart(e.touches[0].clientX); }, { passive: true });
-        stage.addEventListener('touchmove', function (e) { onDragMove(e.touches[0].clientX); }, { passive: true });
-        stage.addEventListener('touchend', onDragEnd);
+        stage.addEventListener('click', function (e) {
+            if (suppressClick) { e.stopPropagation(); e.preventDefault(); suppressClick = false; }
+        }, true);
 
-        // ── Mouse tilt on the centre card only ──
-        if (hasGSAP && !reduceMotion && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
-            stage.addEventListener('mousemove', function (e) {
-                var centerSlot = stage.querySelector('.cs-slot.is-center');
-                if (!centerSlot || dragging) return;
-                var tiltEl = centerSlot.querySelector('.cs-card-tilt');
-                var rect = centerSlot.getBoundingClientRect();
-                var px = (e.clientX - rect.left) / rect.width - 0.5;
-                var py = (e.clientY - rect.top) / rect.height - 0.5;
-                gsap.to(tiltEl, { rotateY: px * 10, rotateX: py * -10, duration: 0.6, ease: 'power2.out', transformPerspective: 800 });
+        if (window.PointerEvent) {
+            // Let the browser keep vertical page scrolling; horizontal gestures belong to the carousel.
+            stage.style.touchAction = 'pan-y';
+            var onPointerMove = function (e) { if (e.isPrimary) onDragMove(e.clientX); };
+            var onPointerEnd = function (e) {
+                window.removeEventListener('pointermove', onPointerMove);
+                window.removeEventListener('pointerup', onPointerEnd);
+                window.removeEventListener('pointercancel', onPointerEnd);
+                if (e.type === 'pointercancel') dragDX = 0; // browser took over (e.g. page scroll): snap back, don't navigate
+                onDragEnd();
+            };
+            stage.addEventListener('pointerdown', function (e) {
+                if (!e.isPrimary || (e.pointerType === 'mouse' && e.button !== 0)) return;
+                onDragStart(e.clientX);
+                // Move/up listeners exist only for the duration of a drag.
+                window.addEventListener('pointermove', onPointerMove);
+                window.addEventListener('pointerup', onPointerEnd);
+                window.addEventListener('pointercancel', onPointerEnd);
             });
+        } else {
+            // Very old browsers without Pointer Events: classic mouse + touch.
+            stage.addEventListener('mousedown', function (e) { if (e.button === 0) onDragStart(e.clientX); });
+            window.addEventListener('mousemove', function (e) { onDragMove(e.clientX); });
+            window.addEventListener('mouseup', onDragEnd);
+            stage.addEventListener('touchstart', function (e) { onDragStart(e.touches[0].clientX); }, { passive: true });
+            stage.addEventListener('touchmove', function (e) { onDragMove(e.touches[0].clientX); }, { passive: true });
+            stage.addEventListener('touchend', onDragEnd);
+        }
+
+        // ── Hover effects (tilt + magnetic button) ──
+        // Scroll/resize only flag the cached geometry as stale; the scroll
+        // listener exists only while the pointer is over the stage or button.
+        var hoverCount = 0;
+        function onScrollDirty() { markGeometryDirty(); }
+        function hoverEnter() { markGeometryDirty(); if (++hoverCount === 1) window.addEventListener('scroll', onScrollDirty, { passive: true }); }
+        function hoverLeave() { if (hoverCount > 0 && --hoverCount === 0) window.removeEventListener('scroll', onScrollDirty); }
+        window.addEventListener('resize', markGeometryDirty, { passive: true });
+
+        if (hasGSAP && !reduceMotion && finePointer) {
+            // Mouse tilt on the centre card only. Events just record the pointer;
+            // the tween is created at most once per frame, replaces the previous
+            // one (overwrite) and never measures layout while the card is settled.
+            var tiltRaf = 0, lastMX = 0, lastMY = 0;
+            function applyTilt() {
+                tiltRaf = 0;
+                if (dragging || !centerSlot || !sectionInView) return;
+                var settling = performance.now() < settleUntil;
+                if (rectDirty || !tiltRect || settling) {
+                    tiltRect = centerSlot.getBoundingClientRect();
+                    rectDirty = settling; // keep re-measuring only while the card is still moving
+                }
+                var px = (lastMX - tiltRect.left) / tiltRect.width - 0.5;
+                var py = (lastMY - tiltRect.top) / tiltRect.height - 0.5;
+                gsap.to(tiltEls[current], { rotateY: px * 10, rotateX: py * -10, duration: 0.6, ease: 'power2.out', transformPerspective: 800, overwrite: 'auto' });
+            }
+            stage.addEventListener('mouseenter', hoverEnter);
+            stage.addEventListener('mousemove', function (e) {
+                if (dragging) return;
+                lastMX = e.clientX; lastMY = e.clientY;
+                if (!tiltRaf) tiltRaf = requestAnimationFrame(applyTilt);
+            }, { passive: true });
             stage.addEventListener('mouseleave', function () {
-                var centerSlot = stage.querySelector('.cs-slot.is-center');
+                hoverLeave();
+                if (tiltRaf) { cancelAnimationFrame(tiltRaf); tiltRaf = 0; }
                 if (!centerSlot) return;
-                gsap.to(centerSlot.querySelector('.cs-card-tilt'), { rotateY: 0, rotateX: 0, duration: 0.7, ease: 'elastic.out(1, 0.5)' });
+                gsap.to(tiltEls[current], { rotateY: 0, rotateX: 0, duration: 0.7, ease: 'elastic.out(1, 0.5)', overwrite: 'auto' });
             });
         }
 
         // ── Magnetic CTA button ──
-        if (hasGSAP && !reduceMotion && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+        if (hasGSAP && !reduceMotion && finePointer) {
+            var ctaRaf = 0, ctaMX = 0, ctaMY = 0;
+            function applyMagnet() {
+                ctaRaf = 0;
+                var curX = gsap.getProperty(ctaEl, 'x') || 0;
+                var curY = gsap.getProperty(ctaEl, 'y') || 0;
+                if (ctaDirty || !ctaBase) {
+                    // Resting centre = measured centre minus the transform GSAP already applied.
+                    var rect = ctaEl.getBoundingClientRect();
+                    ctaBase = { x: rect.left + rect.width / 2 - curX, y: rect.top + rect.height / 2 - curY };
+                    ctaDirty = false;
+                }
+                var mx = ctaMX - (ctaBase.x + curX);
+                var my = ctaMY - (ctaBase.y + curY);
+                gsap.to(ctaEl, { x: mx * 0.35, y: my * 0.5, duration: 0.4, ease: 'power2.out', overwrite: 'auto' });
+            }
+            ctaEl.addEventListener('mouseenter', hoverEnter);
             ctaEl.addEventListener('mousemove', function (e) {
-                var rect = ctaEl.getBoundingClientRect();
-                var mx = e.clientX - (rect.left + rect.width / 2);
-                var my = e.clientY - (rect.top + rect.height / 2);
-                gsap.to(ctaEl, { x: mx * 0.35, y: my * 0.5, duration: 0.4, ease: 'power2.out' });
-            });
+                ctaMX = e.clientX; ctaMY = e.clientY;
+                if (!ctaRaf) ctaRaf = requestAnimationFrame(applyMagnet);
+            }, { passive: true });
             ctaEl.addEventListener('mouseleave', function () {
-                gsap.to(ctaEl, { x: 0, y: 0, duration: 0.6, ease: 'elastic.out(1, 0.4)' });
+                hoverLeave();
+                if (ctaRaf) { cancelAnimationFrame(ctaRaf); ctaRaf = 0; }
+                gsap.to(ctaEl, { x: 0, y: 0, duration: 0.6, ease: 'elastic.out(1, 0.4)', overwrite: 'auto' });
             });
         }
 
@@ -410,12 +556,16 @@
             csmScroll.scrollTop = 0;
             csmModal.classList.add('open');
             csmModal.setAttribute('aria-hidden', 'false');
+            modalOpen = true;
+            syncAnimationState(); // the carousel is hidden behind a blurred overlay: stop animating it
             if (window.mintLockScroll) window.mintLockScroll();
             return true;
         }
         function closeCaseModal() {
             csmModal.classList.remove('open');
             csmModal.setAttribute('aria-hidden', 'true');
+            modalOpen = false;
+            syncAnimationState();
             if (window.mintUnlockScroll) window.mintUnlockScroll();
         }
         ctaEl.addEventListener('click', function (e) {
@@ -423,32 +573,64 @@
         });
         csmClose.addEventListener('click', closeCaseModal);
         csmModal.addEventListener('click', function (e) { if (e.target === csmModal) closeCaseModal(); });
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && csmModal.classList.contains('open')) closeCaseModal();
-        });
+
+        // ── Visibility tracking (observers, not measurements) ──
+        new IntersectionObserver(function (entries) {
+            stageInView = entries[entries.length - 1].isIntersecting;
+        }, { threshold: 0 }).observe(stage);
 
         // ── Soft parallax + slow rotation on the leaf watermark while
         //    this section is in view (listener removed the rest of the
-        //    time, so it costs nothing on the rest of the page) ──
+        //    time, so it costs nothing on the rest of the page).
+        //    The section's page position is measured once (and on resize),
+        //    then derived from scrollY, so scrolling never forces a layout. ──
         var leafBg = document.getElementById('csLeafBg');
-        var leafRaf = null;
-        function updateLeaf() {
-            var rect = stage.closest('.cs-section').getBoundingClientRect();
-            var progress = 1 - (rect.top + rect.height / 2) / window.innerHeight; // ~-1..1 through the section
-            leafBg.style.transform = 'rotate(' + (progress * 10) + 'deg)';
-            leafRaf = null;
+        var leafRaf = 0, leafTop = 0, leafH = 0, leafVh = window.innerHeight, leafLast = null;
+        function measureLeaf() {
+            var rect = section.getBoundingClientRect();
+            leafTop = rect.top + window.scrollY;
+            leafH = rect.height;
+            leafVh = window.innerHeight;
         }
-        var leafObserver = new IntersectionObserver(function (entries) {
-            var inView = entries[0].isIntersecting;
-            if (inView) {
-                window.addEventListener('scroll', onLeafScroll, { passive: true });
-                updateLeaf();
+        function updateLeaf() {
+            leafRaf = 0;
+            var top = leafTop - window.scrollY;
+            var progress = 1 - (top + leafH / 2) / leafVh; // ~-1..1 through the section
+            var deg = Math.round(progress * 10 * 1000) / 1000;
+            if (deg === leafLast) return;
+            leafLast = deg;
+            leafBg.style.transform = 'rotate(' + deg + 'deg)';
+        }
+        function onLeafScroll() { if (!leafRaf) leafRaf = requestAnimationFrame(updateLeaf); }
+
+        new IntersectionObserver(function (entries) {
+            sectionInView = entries[entries.length - 1].isIntersecting;
+            syncAnimationState();
+            if (sectionInView) {
+                if (!reduceMotion) {
+                    measureLeaf();
+                    window.addEventListener('scroll', onLeafScroll, { passive: true });
+                    updateLeaf();
+                }
             } else {
                 window.removeEventListener('scroll', onLeafScroll);
+                if (leafRaf) { cancelAnimationFrame(leafRaf); leafRaf = 0; }
+                stopMetrics(true); // leaving the section: drop any in-flight count-up, show final values
             }
-        }, { threshold: 0 });
-        function onLeafScroll() { if (!leafRaf) leafRaf = requestAnimationFrame(updateLeaf); }
-        if (!reduceMotion) leafObserver.observe(stage.closest('.cs-section'));
+        }, { threshold: 0 }).observe(section);
+
+        // ── Case-study images: start fetching + decoding shortly BEFORE the
+        //    section scrolls in, so the 3D cards don't have to decode large
+        //    images on the frame they first appear. ──
+        var warmObserver = new IntersectionObserver(function (entries) {
+            if (!entries[entries.length - 1].isIntersecting) return;
+            warmObserver.disconnect();
+            imgEls.forEach(function (img) {
+                if (img.loading === 'lazy') img.loading = 'eager';
+                if (img.decode) img.decode().catch(function () {});
+            });
+        }, { rootMargin: '1500px 0px' });
+        warmObserver.observe(section);
 
         // ── Re-lay-out on real size changes (viewport resize, font swap) ──
         var roRaf = null;
@@ -457,9 +639,20 @@
                 if (roRaf) cancelAnimationFrame(roRaf);
                 roRaf = requestAnimationFrame(layout);
             }).observe(stage);
+            if (!reduceMotion) {
+                // Re-measure the leaf's reference position only when the section itself,
+                // or the page content above it (lazy images, fonts), changes size.
+                var leafMeasureRO = new ResizeObserver(function () {
+                    measureLeaf();
+                    if (sectionInView) updateLeaf();
+                });
+                leafMeasureRO.observe(section);
+                var mainSite = document.getElementById('main-site');
+                if (mainSite) leafMeasureRO.observe(mainSite);
+            }
         }
 
         layout();
-        updateDetails();
+        updateDetails(false);
     })();
     });

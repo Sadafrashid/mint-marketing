@@ -109,6 +109,54 @@ const hamburger = document.getElementById('hamburger');
             return ok;
         }
 
+        // ---------- Phone validation ----------
+        // Customer-entered number. Accepts Indian numbers (10 digits starting 6-9,
+        // with or without +91 / 91 / 0) and international numbers with a country
+        // code (7-15 digits, per E.164). Spaces, dashes, dots and brackets are fine.
+        var phoneInput = form.elements['phone'];
+        var phoneHint = document.getElementById('phone-hint');
+
+        function isValidPhone(value) {
+            if (!value) return false;
+            if (!/^\+?[0-9\s\-().]+$/.test(value)) return false;     // allowed characters only
+            if (value.indexOf('+') > 0) return false;                  // '+' only as the first character
+            var digits = value.replace(/\D/g, '');
+            if (digits.length < 7 || digits.length > 15) return false;
+            if (/^(\d)\1+$/.test(digits)) return false;               // e.g. 0000000000
+            if (value.charAt(0) === '+') {
+                if (digits.indexOf('91') === 0) return /^91[6-9]\d{9}$/.test(digits); // +91 => Indian mobile
+                return digits.length >= 8;                             // other country codes
+            }
+            // No '+': treat an Indian-style entry (0 / 91 prefix or plain 10 digits) as Indian mobile
+            if (/^0\d{10}$/.test(digits)) return /^0[6-9]\d{9}$/.test(digits);
+            if (/^91\d{10}$/.test(digits)) return /^91[6-9]\d{9}$/.test(digits);
+            if (digits.length === 10 && /^[6-9]/.test(digits)) return true;
+            return digits.length >= 8; // other international numbers typed without '+'
+        }
+
+        function updatePhoneStatus(showEmpty) {
+            var value = phoneInput.value.trim();
+            if (!value) {
+                phoneHint.style.display = 'none';
+                phoneInput.removeAttribute('aria-invalid');
+                return false;
+            }
+            var ok = isValidPhone(value);
+            phoneInput.setAttribute('aria-invalid', ok ? 'false' : 'true');
+            if (ok) {
+                phoneHint.style.display = 'none';
+            } else {
+                phoneHint.textContent = 'Please enter a valid phone number, e.g. 98765 43210 or +44 20 7946 0958';
+                phoneHint.style.display = 'block';
+            }
+            return ok;
+        }
+
+        phoneInput.addEventListener('blur', updatePhoneStatus);
+        phoneInput.addEventListener('input', function () {
+            if (phoneInput.getAttribute('aria-invalid') === 'true') updatePhoneStatus(); // clear hint once fixed
+        });
+
         emailInput.addEventListener('input', updateEmailStatus); // while typing / editing
         emailInput.addEventListener('blur', updateEmailStatus);  // when leaving the field
 
@@ -138,12 +186,18 @@ const hamburger = document.getElementById('hamburger');
 
             var name = form.elements['name'].value.trim();
             var email = emailInput.value.trim();
+            var phone = phoneInput.value.trim();
             var service = form.elements['service'].value;
             var message = form.elements['message'].value.trim();
-            if (!name || !email || !service) return;
+            if (!name || !email || !phone || !service) return;
 
             if (!updateEmailStatus()) { // invalid format: do not send
                 emailInput.focus();
+                return;
+            }
+
+            if (!updatePhoneStatus()) { // invalid phone: do not send
+                phoneInput.focus();
                 return;
             }
 
@@ -154,6 +208,7 @@ const hamburger = document.getElementById('hamburger');
             var params = new URLSearchParams();
             params.append('name', name);
             params.append('email', email);
+            params.append('phone', phone);
             params.append('service', service);
             params.append('message', message || '(No message provided)');
             params.append('_subject', 'New website enquiry from ' + name + ' (' + service + ')');
