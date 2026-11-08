@@ -56,7 +56,7 @@
                 desc: 'A local beauty store in Aminabad, Lucknow with under 700 followers and content topping out at a few hundred views. We rebuilt the content approach around scroll-stopping hooks and a recognizable face for the brand &mdash; 100% organic, no paid ads &mdash; and it translated into real store footfall, not just numbers on a screen.',
                 metrics: [
                     { value: 5000, suffix: '+', label: 'Organic Followers' },
-                    { value: 230, suffix: 'K+', label: 'Highest Reel Views' },
+                    { value: 1.5, suffix: 'M+', label: 'Account Views in a month' },
                     { value: 5000, suffix: '%', label: 'Engagement Growth' }
                 ],
                 full: {
